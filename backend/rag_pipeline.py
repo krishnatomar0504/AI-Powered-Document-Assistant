@@ -69,10 +69,9 @@ def ask_question(question):
     vectorstore = get_vectorstore()
 
     retriever = vectorstore.as_retriever(
-        search_type="similarity_score_threshold",
+        search_type="similarity",
         search_kwargs={
-            "k": 3,
-            "score_threshold": 0.5
+            "k": 3
         }
     )
 
