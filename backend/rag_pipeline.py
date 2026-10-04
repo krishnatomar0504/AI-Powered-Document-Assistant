@@ -6,6 +6,8 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 
+from backend.config import DATA_DIR
+
 load_dotenv()
 
 
@@ -24,7 +26,7 @@ def get_vectorstore():
     return Chroma(
         collection_name="rag_documents",
         embedding_function=embeddings,
-        persist_directory="./chroma_db"
+        persist_directory=str(DATA_DIR / "chroma_db")
     )
 
 

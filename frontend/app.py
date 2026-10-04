@@ -1,57 +1,21 @@
-import atexit
-import socket
-import subprocess
-import sys
+import os
 from datetime import datetime
 from pathlib import Path
 
 import requests
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 
 
-API_URL = "http://127.0.0.1:8000"
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+def get_api_url():
+    api_url = os.getenv("API_URL")
+    if api_url:
+        return api_url.rstrip("/")
 
-
-def is_fastapi_running():
     try:
-        with socket.create_connection(("127.0.0.1", 8000), timeout=1):
-            return True
-    except OSError:
-        return False
-
-
-@st.cache_resource
-def start_fastapi():
-    if is_fastapi_running():
-        return None
-
-    process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "backend.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000"
-        ],
-        cwd=PROJECT_ROOT,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
-
-    def cleanup():
-        if process.poll() is None:
-            process.terminate()
-
-    atexit.register(cleanup)
-
-    return process
-
-
-start_fastapi()
+        return st.secrets["API_URL"].rstrip("/")
+    except (KeyError, StreamlitSecretNotFoundError):
+        return "http://127.0.0.1:8000"
 
 
 st.set_page_config(
@@ -59,6 +23,8 @@ st.set_page_config(
     page_icon="📚",
     layout="wide"
 )
+
+API_URL = get_api_url()
 
 
 if "messages" not in st.session_state:

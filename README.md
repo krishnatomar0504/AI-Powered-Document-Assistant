@@ -322,11 +322,13 @@ The persistent collection is:
 collection_name = "rag_documents"
 ```
 
-and the local database directory is:
+and its database directory is configured by `DATA_DIR`:
 
 ```text
-./chroma_db
+<DATA_DIR>/chroma_db
 ```
+
+When `DATA_DIR` is not set, the project root is used.
 
 ### 5. Retrieval
 
@@ -441,7 +443,7 @@ can still be recognized as the same document when their actual PDF bytes are ide
 ChromaDB is persistent because the vector store is reopened from:
 
 ```text
-chroma_db/
+<DATA_DIR>/chroma_db/
 ```
 
 instead of being kept only in a Python variable.
@@ -451,10 +453,16 @@ The question path uses the persistent vector store again, which means restarting
 The SQLite registry is stored in:
 
 ```text
-documents.db
+<DATA_DIR>/documents.db
 ```
 
-Both files are local data stores and should normally be excluded from Git.
+By default, `DATA_DIR` is the project root, preserving the local paths
+`chroma_db/` and `documents.db`. In production, set `DATA_DIR=/data` and mount
+a persistent volume at `/data`; Chroma and SQLite will then use
+`/data/chroma_db` and `/data/documents.db`. Uploaded PDFs are stored in
+`<DATA_DIR>/pdf` in production, or the existing `data/pdf` directory locally.
+The SHA-256 registry and vectors survive restarts only when this storage is
+persistent.
 
 ---
 
@@ -464,6 +472,8 @@ Create a `.env` file in the project root:
 
 ```env
 GROQ_API_KEY=your_groq_api_key
+DATA_DIR=
+ALLOWED_ORIGINS=
 ```
 
 The backend loads it with:
@@ -474,7 +484,10 @@ from dotenv import load_dotenv
 load_dotenv()
 ```
 
-Do not commit `.env` to GitHub.
+`DATA_DIR` is optional locally (defaults to the project root). In production,
+set it to `/data`. `ALLOWED_ORIGINS` is an optional comma-separated list of
+additional frontend origins; localhost Streamlit origins are allowed by
+default. Never commit `.env` or a real API key to GitHub.
 
 ---
 
@@ -530,7 +543,7 @@ The application has two running processes.
 From the project root:
 
 ```bash
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 FastAPI runs at:
@@ -728,9 +741,44 @@ The local API URL:
 http://127.0.0.1:8000
 ```
 
-must be replaced by the public FastAPI URL in the deployed Streamlit application.
+is the Streamlit fallback for local development. To use a different URL, set
+`API_URL` in the environment or Streamlit secrets.
 
-ChromaDB and the SQLite registry must be placed on persistent storage in production if you need the indexed data to survive service restarts or redeployments.
+### Deploy FastAPI
+
+Deploy the project repository to a Python hosting platform that supports a
+persistent disk, and configure these backend environment variables:
+
+```text
+GROQ_API_KEY=<your Groq API key>
+DATA_DIR=/data
+ALLOWED_ORIGINS=https://<your-streamlit-app>.streamlit.app
+```
+
+Mount the platform's persistent volume at `/data`. Set the platform's `PORT`
+environment variable and use this exact start command:
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+```
+
+The service's public HTTPS URL is the backend URL; its `/docs` path provides
+FastAPI's API documentation. Keep `GROQ_API_KEY` in the hosting platform's
+secret/environment-variable settings, not in source code.
+
+### Deploy Streamlit Community Cloud
+
+Deploy `frontend/app.py` from this repository on Streamlit Community Cloud.
+In the app's **Settings → Secrets**, configure the deployed backend URL:
+
+```toml
+API_URL = "https://<your-fastapi-service>"
+```
+
+The Streamlit app sends its `/upload` and `/ask` requests to
+`{API_URL}/upload` and `{API_URL}/ask`. This URL must be the reachable public
+FastAPI service URL, not `127.0.0.1`, `localhost`, or `0.0.0.0`. Streamlit Cloud
+does not start FastAPI; the backend must already be deployed and running.
 
 For a real multi-user deployment, document authorization should also be added if uploaded documents are private. The current SHA-256 mechanism answers **“Has this exact document content already been indexed?”**; it does not by itself implement user-specific access control.
 

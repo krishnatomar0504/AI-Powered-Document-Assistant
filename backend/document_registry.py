@@ -1,7 +1,9 @@
 import sqlite3
 
+from backend.config import DATA_DIR
 
-DB_PATH = "documents.db"
+
+DB_PATH = str(DATA_DIR / "documents.db")
 
 
 def init_db():

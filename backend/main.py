@@ -1,9 +1,11 @@
-from fastapi import FastAPI, UploadFile, File
-from pydantic import BaseModel
-
 import hashlib
 import os
 
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from backend.config import PDF_DIR
 from backend.rag_pipeline import ingest_pdf, ask_question
 from backend.document_registry import (
     reserve_document,
@@ -12,6 +14,23 @@ from backend.document_registry import (
 )
 
 app = FastAPI()
+
+allowed_origins = {
+    "http://localhost:8501",
+    "http://127.0.0.1:8501",
+}
+allowed_origins.update(
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=sorted(allowed_origins),
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/upload")
@@ -32,7 +51,12 @@ def upload_pdf(file: UploadFile = File(...)):
             "filename": file.filename
         }
 
-    file_path = f"data/pdf/{file.filename}"
+    filename = (
+        (file.filename or "uploaded.pdf")
+        .replace("\\", "/")
+        .split("/")[-1]
+    )
+    file_path = PDF_DIR / filename
 
     try:
         with open(file_path, "wb") as buffer:
