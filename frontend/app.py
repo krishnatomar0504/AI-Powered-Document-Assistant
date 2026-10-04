@@ -27,14 +27,7 @@ st.set_page_config(
     layout="wide"
 )
 
-API_URL, API_URL_CONFIGURED = get_api_url()
-
-if not API_URL_CONFIGURED:
-    st.warning(
-        "API_URL is not configured. Using http://127.0.0.1:8000. "
-        "For Streamlit Community Cloud, add API_URL to app secrets "
-        "with your public FastAPI URL."
-    )
+API_URL, _ = get_api_url()
 
 
 if "messages" not in st.session_state:
@@ -49,8 +42,8 @@ st.markdown(
     <style>
 
     .block-container {
-        padding-top: 1rem;
-        padding-bottom: 5rem;
+        padding-top: 4rem;
+        padding-bottom: 6rem;
     }
 
     [data-testid="stSidebar"] {
@@ -99,17 +92,20 @@ st.markdown(
         background: #0f5ed8;
     }
 
-    .app-title {
+    .stMarkdown h1.app-title {
+        margin: 0 !important;
+        padding: 0 !important;
         color: #f8fafc;
-        font-size: 32px;
+        font-size: clamp(1.6rem, 3vw, 2rem);
         font-weight: 750;
-        margin-bottom: 0;
+        line-height: 1.25 !important;
     }
 
     .app-subtitle {
+        margin: 0.25rem 0 0;
         color: #a8b7ca;
         font-size: 15px;
-        margin-bottom: 20px;
+        line-height: 1.5;
     }
 
     [data-testid="stChatMessage"] {
@@ -171,10 +167,6 @@ st.markdown(
     }
 
     @media (max-width: 640px) {
-        .app-title {
-            font-size: 25px;
-        }
-
         .welcome-card {
             margin-top: 1.5rem;
             padding: 1.5rem 1rem;
@@ -298,13 +290,13 @@ with st.sidebar:
         st.caption("No documents uploaded yet.")
 
 
-left, right = st.columns([5, 2])
+left, right = st.columns([5, 1.6], vertical_alignment="center")
 
 
 with left:
 
     st.markdown(
-        '<div class="app-title">📖 PDF RAG Assistant</div>',
+        '<h1 class="app-title">📖 PDF RAG Assistant</h1>',
         unsafe_allow_html=True
     )
 
