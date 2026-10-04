@@ -1,24 +1,14 @@
 import os
+
 from datetime import datetime
+
 from pathlib import Path
 
 import requests
 import streamlit as st
-from streamlit.errors import StreamlitSecretNotFoundError
 
 
-def get_api_url():
-    api_url = os.getenv("API_URL")
-    if not api_url:
-        try:
-            api_url = st.secrets["API_URL"]
-        except (KeyError, StreamlitSecretNotFoundError):
-            api_url = None
-
-    if api_url:
-        return api_url.rstrip("/"), True
-
-    return "http://127.0.0.1:8000", False
+API_URL = "http://127.0.0.1:8000"
 
 
 st.set_page_config(
@@ -26,8 +16,6 @@ st.set_page_config(
     page_icon="📚",
     layout="wide"
 )
-
-API_URL, _ = get_api_url()
 
 
 if "messages" not in st.session_state:
@@ -166,11 +154,33 @@ st.markdown(
         line-height: 1.6;
     }
 
+    .document-card {
+        padding: 10px;
+        margin-bottom: 8px;
+        background: #132d49;
+        border: 1px solid #1f4568;
+        border-radius: 8px;
+    }
+
+    .document-name {
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .document-status {
+        color: #a8b7ca;
+        font-size: 11px;
+        margin-top: 3px;
+    }
+
     @media (max-width: 640px) {
+
         .welcome-card {
             margin-top: 1.5rem;
             padding: 1.5rem 1rem;
         }
+
     }
 
     </style>
@@ -182,6 +192,7 @@ st.markdown(
 with st.sidebar:
 
     st.title("📖 DocAI")
+
     st.caption("Your RAG Assistant")
 
     uploaded_file = st.file_uploader(
@@ -220,7 +231,14 @@ with st.sidebar:
 
                 if response.status_code == 200:
 
-                    message = result.get("message", "")
+                    message = result.get(
+                        "message",
+                        ""
+                    )
+
+                    file_hash = result.get(
+                        "file_hash"
+                    )
 
                     existing = any(
                         document["name"] == uploaded_file.name
@@ -228,10 +246,12 @@ with st.sidebar:
                     )
 
                     if not existing:
+
                         st.session_state.documents.append(
                             {
                                 "name": uploaded_file.name,
-                                "message": message
+                                "message": message,
+                                "file_hash": file_hash
                             }
                         )
 
@@ -259,14 +279,15 @@ with st.sidebar:
             except requests.exceptions.RequestException as error:
 
                 st.error(
-                    f"Cannot connect to FastAPI at {API_URL}. "
-                    "Check that the backend is running and API_URL points "
-                    f"to its public URL. Details: {error}"
+                    f"Could not reach the backend service at {API_URL}. "
+                    f"Details: {error}"
                 )
 
             except Exception as e:
 
-                st.error(f"Error: {e}")
+                st.error(
+                    f"Error: {e}"
+                )
 
 
     st.divider()
@@ -275,22 +296,110 @@ with st.sidebar:
 
     if st.session_state.documents:
 
-        for document in st.session_state.documents:
+        for index, document in enumerate(
+            st.session_state.documents
+        ):
 
-            st.write(
-                f"📄 **{document['name']}**"
+            col1, col2 = st.columns(
+                [5, 1]
             )
 
-            if "already exists" in document["message"].lower():
+            with col1:
 
-                st.caption("Already indexed")
+                st.markdown(
+                    f"""
+                    <div class="document-card">
+                        <div class="document-name">
+                            📄 {document["name"]}
+                        </div>
+                        <div class="document-status">
+                            PDF document
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                if "already exists" in document["message"].lower():
+
+                    st.caption(
+                        "Already indexed"
+                    )
+
+            with col2:
+
+                if st.button(
+                    "🗑",
+                    key=f"delete_document_{index}",
+                    help="Remove PDF"
+                ):
+
+                    try:
+
+                        file_hash = document.get(
+                            "file_hash"
+                        )
+
+                        if not file_hash:
+
+                            st.error(
+                                "File hash not found."
+                            )
+
+                        else:
+
+                            response = requests.delete(
+                                f"{API_URL}/documents/{file_hash}",
+                                timeout=300
+                            )
+
+                            result = response.json()
+
+                            if response.status_code == 200:
+
+                                st.session_state.documents.pop(
+                                    index
+                                )
+
+                                st.success(
+                                    "PDF deleted successfully."
+                                )
+
+                                st.rerun()
+
+                            else:
+
+                                st.error(
+                                    result.get(
+                                        "message",
+                                        "PDF deletion failed."
+                                    )
+                                )
+
+                    except requests.exceptions.RequestException as error:
+
+                        st.error(
+                            f"Could not reach the backend service at {API_URL}. "
+                            f"Details: {error}"
+                        )
+
+                    except Exception as e:
+
+                        st.error(
+                            f"Error: {e}"
+                        )
 
     else:
 
-        st.caption("No documents uploaded yet.")
+        st.caption(
+            "No documents uploaded yet."
+        )
 
 
-left, right = st.columns([5, 1.6], vertical_alignment="center")
+left, right = st.columns(
+    [5, 1.6],
+    vertical_alignment="center"
+)
 
 
 with left:
@@ -317,21 +426,27 @@ with right:
     ):
 
         st.session_state.messages = []
+
         st.rerun()
 
 
 st.divider()
 
+
 if not st.session_state.messages:
+
     st.markdown(
         """
         <div class="welcome-card">
+
             <h2>Ask your PDFs anything</h2>
+
             <p>
                 Upload a PDF from the sidebar, then ask a question here.
                 Answers include source pages so you can check the original
                 document.
             </p>
+
         </div>
         """,
         unsafe_allow_html=True
@@ -351,21 +466,31 @@ for message in st.session_state.messages:
 
         if message["role"] == "assistant":
 
-            sources = message.get("sources", [])
+            sources = message.get(
+                "sources",
+                []
+            )
 
             if sources:
 
                 st.divider()
 
-                st.markdown("**Sources**")
+                st.markdown(
+                    "**Sources**"
+                )
 
                 for source in sources:
 
                     source_name = Path(
-                        source.get("source", "Unknown")
+                        source.get(
+                            "source",
+                            "Unknown"
+                        )
                     ).name
 
-                    page = source.get("page")
+                    page = source.get(
+                        "page"
+                    )
 
                     if page is not None:
 
@@ -444,9 +569,8 @@ if question:
     except requests.exceptions.RequestException as error:
 
         answer = (
-            f"Cannot connect to FastAPI at {API_URL}. "
-            "Check that the backend is running and API_URL points to its "
-            f"public URL. Details: {error}"
+            f"Could not reach the backend service at {API_URL}. "
+            f"Details: {error}"
         )
 
         sources = []
@@ -456,6 +580,7 @@ if question:
         answer = f"Error: {e}"
 
         sources = []
+
 
     st.session_state.messages.append(
         {

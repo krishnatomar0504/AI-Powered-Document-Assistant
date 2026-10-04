@@ -1,9 +1,7 @@
 import sqlite3
 
-from backend.config import DATA_DIR
 
-
-DB_PATH = str(DATA_DIR / "documents.db")
+DB_PATH = "documents.db"
 
 
 def init_db():
@@ -70,6 +68,41 @@ def remove_document(file_hash):
 
     connection.commit()
     connection.close()
+
+
+def get_documents():
+    connection = sqlite3.connect(DB_PATH)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT file_hash, filename, status
+        FROM documents
+    """)
+
+    documents = cursor.fetchall()
+
+    connection.close()
+
+    return documents
+
+
+def get_document(file_hash):
+    connection = sqlite3.connect(DB_PATH)
+
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT file_hash, filename, status
+        FROM documents
+        WHERE file_hash = ?
+    """, (file_hash,))
+
+    document = cursor.fetchone()
+
+    connection.close()
+
+    return document
 
 
 init_db()

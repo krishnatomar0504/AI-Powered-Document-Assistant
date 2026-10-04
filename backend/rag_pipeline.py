@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyMuPDFLoader
@@ -6,7 +8,6 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 
-from backend.config import DATA_DIR
 
 load_dotenv()
 
@@ -26,11 +27,14 @@ def get_vectorstore():
     return Chroma(
         collection_name="rag_documents",
         embedding_function=embeddings,
-        persist_directory=str(DATA_DIR / "chroma_db")
+        persist_directory=os.path.join(
+            os.getenv("DATA_DIR", "."),
+            "chroma_db"
+        )
     )
 
 
-def ingest_pdf(pdf_path):
+def ingest_pdf(pdf_path, file_hash):
     loader = PyMuPDFLoader(pdf_path)
     documents = loader.load()
 
@@ -41,11 +45,24 @@ def ingest_pdf(pdf_path):
 
     chunks = text_splitter.split_documents(documents)
 
+    for chunk in chunks:
+        chunk.metadata["file_hash"] = file_hash
+
     vectorstore = get_vectorstore()
 
     vectorstore.add_documents(chunks)
 
     return vectorstore
+
+
+def delete_document(file_hash):
+    vectorstore = get_vectorstore()
+
+    vectorstore.delete(
+        where={
+            "file_hash": file_hash
+        }
+    )
 
 
 def ask_question(question):
