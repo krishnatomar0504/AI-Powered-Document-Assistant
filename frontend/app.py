@@ -9,13 +9,16 @@ from streamlit.errors import StreamlitSecretNotFoundError
 
 def get_api_url():
     api_url = os.getenv("API_URL")
-    if api_url:
-        return api_url.rstrip("/")
+    if not api_url:
+        try:
+            api_url = st.secrets["API_URL"]
+        except (KeyError, StreamlitSecretNotFoundError):
+            api_url = None
 
-    try:
-        return st.secrets["API_URL"].rstrip("/")
-    except (KeyError, StreamlitSecretNotFoundError):
-        return "http://127.0.0.1:8000"
+    if api_url:
+        return api_url.rstrip("/"), True
+
+    return "http://127.0.0.1:8000", False
 
 
 st.set_page_config(
@@ -24,7 +27,14 @@ st.set_page_config(
     layout="wide"
 )
 
-API_URL = get_api_url()
+API_URL, API_URL_CONFIGURED = get_api_url()
+
+if not API_URL_CONFIGURED:
+    st.warning(
+        "API_URL is not configured. Using http://127.0.0.1:8000. "
+        "For Streamlit Community Cloud, add API_URL to app secrets "
+        "with your public FastAPI URL."
+    )
 
 
 if "messages" not in st.session_state:
@@ -208,10 +218,12 @@ with st.sidebar:
                         )
                     )
 
-            except requests.exceptions.RequestException:
+            except requests.exceptions.RequestException as error:
 
                 st.error(
-                    "Cannot connect to FastAPI."
+                    f"Cannot connect to FastAPI at {API_URL}. "
+                    "Check that the backend is running and API_URL points "
+                    f"to its public URL. Details: {error}"
                 )
 
             except Exception as e:
@@ -375,11 +387,12 @@ if question:
 
             sources = []
 
-    except requests.exceptions.RequestException:
+    except requests.exceptions.RequestException as error:
 
         answer = (
-            "Cannot connect to FastAPI. "
-            "Make sure the backend is running."
+            f"Cannot connect to FastAPI at {API_URL}. "
+            "Check that the backend is running and API_URL points to its "
+            f"public URL. Details: {error}"
         )
 
         sources = []
