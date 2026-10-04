@@ -131,29 +131,6 @@ st.markdown(
         box-shadow: none;
     }
 
-    .welcome-card {
-        margin: 3rem auto 0;
-        max-width: 620px;
-        padding: 2rem;
-        text-align: center;
-        color: #dbe6f2;
-        background: linear-gradient(145deg, #12253c, #101b2a);
-        border: 1px solid #263b53;
-        border-radius: 18px;
-    }
-
-    .welcome-card h2 {
-        margin: 0 0 0.5rem;
-        color: #f8fafc;
-        font-size: 1.4rem;
-    }
-
-    .welcome-card p {
-        margin: 0;
-        color: #a8b7ca;
-        line-height: 1.6;
-    }
-
     .document-card {
         padding: 10px;
         margin-bottom: 8px;
@@ -172,15 +149,6 @@ st.markdown(
         color: #a8b7ca;
         font-size: 11px;
         margin-top: 3px;
-    }
-
-    @media (max-width: 640px) {
-
-        .welcome-card {
-            margin-top: 1.5rem;
-            padding: 1.5rem 1rem;
-        }
-
     }
 
     </style>
@@ -435,22 +403,18 @@ st.divider()
 
 if not st.session_state.messages:
 
-    st.markdown(
-        """
-        <div class="welcome-card">
+    with st.container(border=True):
 
-            <h2>Ask your PDFs anything</h2>
+        st.subheader(
+            "Ask your PDFs anything",
+            anchor=False
+        )
 
-            <p>
-                Upload a PDF from the sidebar, then ask a question here.
-                Answers include source pages so you can check the original
-                document.
-            </p>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.write(
+            "Upload a PDF from the sidebar, then ask a question here. "
+            "Answers include source pages so you can check the original "
+            "document."
+        )
 
 
 for message in st.session_state.messages:
