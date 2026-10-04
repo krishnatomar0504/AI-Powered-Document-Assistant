@@ -100,39 +100,85 @@ st.markdown(
     }
 
     .app-title {
-        color: #12213a;
-        font-size: 30px;
+        color: #f8fafc;
+        font-size: 32px;
         font-weight: 750;
         margin-bottom: 0;
     }
 
     .app-subtitle {
-        color: #68778d;
+        color: #a8b7ca;
         font-size: 15px;
         margin-bottom: 20px;
     }
 
     [data-testid="stChatMessage"] {
-        border: 1px solid #dfe7f0;
+        border: 1px solid #263b53;
         border-radius: 14px;
         margin-bottom: 12px;
         padding: 12px 16px;
-        background: #ffffff;
+        background: #111e2e;
     }
 
-    [data-testid="stChatMessageContent"] {
-        color: #172033;
+    [data-testid="stChatMessageContent"],
+    [data-testid="stChatMessageContent"] p {
+        color: #e6edf5;
+    }
+
+    [data-testid="stChatInput"] {
+        background: #111e2e;
+        border: 1px solid #263b53;
+        border-radius: 12px;
     }
 
     [data-testid="stChatInput"] textarea {
-        background: #ffffff;
-        color: #172033;
-        border: 1px solid #ccd8e5;
-        border-radius: 10px;
+        background: #111e2e !important;
+        color: #f8fafc !important;
+        caret-color: #f8fafc;
+        border: none !important;
+    }
+
+    [data-testid="stChatInput"] textarea::placeholder {
+        color: #9aabc0 !important;
+        opacity: 1;
     }
 
     [data-testid="stChatInput"] textarea:focus {
-        border-color: #1769e8;
+        box-shadow: none;
+    }
+
+    .welcome-card {
+        margin: 3rem auto 0;
+        max-width: 620px;
+        padding: 2rem;
+        text-align: center;
+        color: #dbe6f2;
+        background: linear-gradient(145deg, #12253c, #101b2a);
+        border: 1px solid #263b53;
+        border-radius: 18px;
+    }
+
+    .welcome-card h2 {
+        margin: 0 0 0.5rem;
+        color: #f8fafc;
+        font-size: 1.4rem;
+    }
+
+    .welcome-card p {
+        margin: 0;
+        color: #a8b7ca;
+        line-height: 1.6;
+    }
+
+    @media (max-width: 640px) {
+        .app-title {
+            font-size: 25px;
+        }
+
+        .welcome-card {
+            margin-top: 1.5rem;
+            padding: 1.5rem 1rem;
+        }
     }
 
     </style>
@@ -252,7 +298,7 @@ with st.sidebar:
         st.caption("No documents uploaded yet.")
 
 
-left, right = st.columns([5, 1])
+left, right = st.columns([5, 2])
 
 
 with left:
@@ -273,7 +319,8 @@ with left:
 with right:
 
     if st.button(
-        "🗑 Clear Chat",
+        "Clear chat",
+        icon="🗑️",
         use_container_width=True
     ):
 
@@ -282,6 +329,21 @@ with right:
 
 
 st.divider()
+
+if not st.session_state.messages:
+    st.markdown(
+        """
+        <div class="welcome-card">
+            <h2>Ask your PDFs anything</h2>
+            <p>
+                Upload a PDF from the sidebar, then ask a question here.
+                Answers include source pages so you can check the original
+                document.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 for message in st.session_state.messages:
